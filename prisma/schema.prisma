@@ -1,0 +1,57 @@
+// Data-first: quejas y marcas normalizadas para analítica y dashboards.
+// SQLite en dev; en producción usar DATABASE_URL con PostgreSQL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Marca / persona jurídica por país (ISO 3166-1 alpha-2) + nombre normalizado.
+model Brand {
+  id               String   @id @default(uuid())
+  countryCode      String
+  normalizedName   String
+  displayName      String
+  /// Posición 0-based en el último top del muro (null = fuera del top o nunca rankeada).
+  lastWallRank     Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  complaints       Complaint[]
+
+  @@unique([normalizedName, countryCode])
+  @@index([normalizedName])
+  @@index([countryCode])
+}
+
+model Complaint {
+  id                 String   @id @default(uuid())
+  brandId            String
+  brand              Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  text               String
+  intensity          Int
+  createdAt          DateTime @default(now())
+  visitorHash        String
+  noise              Boolean  @default(false)
+  reactionMeToo      Int      @default(0)
+  reactionIndignante Int      @default(0)
+
+  /// Score -1..1 o 0..1 según pipeline (nullable hasta NLP).
+  sentimentScore   Float?
+  sentimentLabel   String?
+  /// JSON array de etiquetas/tópicos (ej. ["facturación","app"]).
+  topicsJson       String?
+
+  /// clean | spam | coordinated | noise (null si moderación desactivada o sin API).
+  moderationSeverity  String?
+  /// JSON: flags, modelo, etc. (auditoría; no reenviar PII).
+  moderationFlagsJson String?
+
+  @@index([createdAt])
+  @@index([brandId])
+  @@index([noise])
+  @@index([visitorHash])
+}
