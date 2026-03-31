@@ -155,7 +155,7 @@ export function ComplaintCard({ complaint, onUpdate }: Props) {
               >
                 <span>Compartir chisme en imagen</span>
                 <span className="text-[10px] font-normal normal-case text-white/50">
-                  story / post · 9:16
+                  post cuadrado · 1:1
                 </span>
               </button>
               <button
