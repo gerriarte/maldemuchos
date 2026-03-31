@@ -1,12 +1,12 @@
 // Data-first: quejas y marcas normalizadas para analítica y dashboards.
-// SQLite en dev; en producción usar DATABASE_URL con PostgreSQL.
+// Railway/PostgreSQL en todos los entornos con DATABASE_URL.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

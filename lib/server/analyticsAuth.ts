@@ -5,8 +5,11 @@ import { AnalyticsUnauthorizedError } from "@/lib/domain/errors";
  * Si no está definido (dev), permite acceso sin auth.
  */
 export function assertAnalyticsAuthorized(request: Request): void {
-  const secret = process.env.ANALYTICS_API_SECRET;
-  if (!secret?.trim()) {
+  const secret = process.env.ANALYTICS_API_SECRET?.trim();
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new AnalyticsUnauthorizedError("Analytics no configurado");
+    }
     return;
   }
   const auth = request.headers.get("authorization");

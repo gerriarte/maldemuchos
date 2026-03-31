@@ -3,10 +3,11 @@ import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 
 function secret(): string {
-  return (
-    process.env.CHALLENGE_HMAC_SECRET ??
-    "dev-only-challenge-secret-change-in-production"
-  );
+  const value = process.env.CHALLENGE_HMAC_SECRET?.trim();
+  if (!value) {
+    throw new Error("CHALLENGE_HMAC_SECRET is required");
+  }
+  return value;
 }
 
 export type MathChallengePayload = {

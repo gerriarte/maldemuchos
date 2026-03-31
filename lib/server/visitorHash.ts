@@ -19,9 +19,10 @@ export function getClientIp(request: Request): string {
  * Requiere IP_HASH_SALT en producción.
  */
 export function hashVisitorIdentity(ip: string, clientFingerprint: string): string {
-  const salt =
-    process.env.IP_HASH_SALT ??
-    "dev-only-rotate-for-production";
+  const salt = process.env.IP_HASH_SALT?.trim();
+  if (!salt) {
+    throw new Error("IP_HASH_SALT is required");
+  }
   const payload = `${ip}|${clientFingerprint}`;
   return createHash("sha256")
     .update(`${salt}|${payload}`, "utf8")

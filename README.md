@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mal de Muchos
 
-## Getting Started
+Aplicación Next.js (App Router) para publicar quejas anónimas y generar analítica.
 
-First, run the development server:
+## Requisitos
+
+- Node.js 20+
+- PostgreSQL (Railway recomendado)
+
+## Variables de entorno
+
+Copiá `.env.example` y completá:
+
+- `DATABASE_URL` (PostgreSQL, obligatorio)
+- `IP_HASH_SALT` (obligatorio)
+- `CHALLENGE_HMAC_SECRET` (obligatorio)
+- `ANALYTICS_API_SECRET` (obligatorio para proteger `/api/analytics`)
+- `ANTHROPIC_API_KEY` (si moderación IA está activa)
+
+## Desarrollo local
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Base de datos
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run db:migrate
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+No hay datos mock precargados por defecto.
 
-## Learn More
+## Deploy en Railway
 
-To learn more about Next.js, take a look at the following resources:
+Este repo incluye `railway.json` y usa:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Build: `npm run build`
+- Start: `npm run start:railway` (ejecuta migraciones y levanta Next)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Configurar en Railway las variables:
 
-## Deploy on Vercel
+- `DATABASE_URL`
+- `IP_HASH_SALT`
+- `CHALLENGE_HMAC_SECRET`
+- `ANALYTICS_API_SECRET`
+- `ANTHROPIC_API_KEY` (opcional)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Calidad
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npm run build
+```

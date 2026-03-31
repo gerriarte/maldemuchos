@@ -1,6 +1,6 @@
 -- Redefinir marca como (nombre normalizado + país) para multinacionales.
 
--- SQLite: agregar columna con default para filas existentes
+-- Agregar columna con default para filas existentes.
 ALTER TABLE "Brand" ADD COLUMN "countryCode" TEXT NOT NULL DEFAULT 'AR';
 
 DROP INDEX "Brand_normalizedName_key";
