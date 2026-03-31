@@ -14,5 +14,8 @@ export function anthropicModel(): string {
 /** Desactiva llamadas a Claude (solo heurísticas locales / anti-spam por tasa). */
 export function skipComplaintModeration(): boolean {
   const v = process.env.SKIP_COMPLAINT_MODERATION?.toLowerCase();
+  if (!v) {
+    return true;
+  }
   return v === "true" || v === "1" || v === "yes";
 }
