@@ -61,6 +61,31 @@ export function HomeShell() {
 
         <VentBox onPosted={handlePosted} />
         <ComplaintFeed ref={feedRef} />
+        <section
+          aria-labelledby="faq-title"
+          className="border-2 border-white/50 bg-black px-4 py-5 sm:px-6"
+        >
+          <h2
+            id="faq-title"
+            className="font-[family-name:var(--font-archivo)] text-2xl uppercase leading-none text-white sm:text-3xl"
+          >
+            Preguntas frecuentes
+          </h2>
+          <div className="mt-4 space-y-3 font-mono text-sm text-white/85">
+            <p>
+              <strong className="text-[#E5FF00]">¿Cómo publico?</strong> Completá
+              empresa, país, queja e intensidad en la caja de ventilación y enviá.
+            </p>
+            <p>
+              <strong className="text-[#E5FF00]">¿Es anónimo?</strong> Sí, no
+              pedimos registro para publicar.
+            </p>
+            <p>
+              <strong className="text-[#E5FF00]">¿Qué no está permitido?</strong>{" "}
+              Nombres de personas, datos sensibles y ataques a individuos.
+            </p>
+          </div>
+        </section>
       </div>
 
       <aside className="flex w-full shrink-0 flex-col gap-6 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-[min(100%,420px)] lg:overflow-y-auto lg:pr-1 xl:w-[min(100%,460px)] 2xl:w-[min(100%,500px)]">

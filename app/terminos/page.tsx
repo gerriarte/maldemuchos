@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "Términos y condiciones — Mal de Muchos",
   description:
     "Aviso legal, uso de datos y reglas de la plataforma. Versión legible.",
+  alternates: {
+    canonical: "/terminos",
+  },
 };
 
 export default function TerminosPage() {
