@@ -1,15 +1,18 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
-  COUNTRY_OPTIONS,
+  LATAM_COUNTRY_OPTIONS,
   guessCountryFromLocale,
+  isValidLatamCountryCode,
 } from "@/lib/domain/countries";
 import type { ComplaintPublic } from "@/lib/domain/types";
 
 type Props = {
   onPosted: (c: ComplaintPublic) => void;
+  variant?: "inline" | "modal";
+  onRequestClose?: () => void;
 };
 
 function intensityLabel(n: number) {
@@ -30,7 +33,12 @@ type ChallengePayload = {
   signature: string;
 };
 
-export function VentBox({ onPosted }: Props) {
+export function VentBox({
+  onPosted,
+  variant = "inline",
+  onRequestClose,
+}: Props) {
+  const listId = useId();
   const [text, setText] = useState("");
   const [company, setCompany] = useState("");
   const [countryCode, setCountryCode] = useState("AR");
@@ -68,7 +76,25 @@ export function VentBox({ onPosted }: Props) {
   }, [loadChallenge]);
 
   useEffect(() => {
-    setCountryCode(guessCountryFromLocale(navigator.language));
+    let cancelled = false;
+    const localeGuess = guessCountryFromLocale(
+      typeof navigator !== "undefined" ? navigator.language : undefined,
+    );
+    setCountryCode(localeGuess);
+
+    fetch("/api/country-hint")
+      .then((r) => r.json() as Promise<{ countryCode: string | null }>)
+      .then((data) => {
+        if (cancelled || !data.countryCode) return;
+        if (isValidLatamCountryCode(data.countryCode)) {
+          setCountryCode(data.countryCode);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -179,6 +205,217 @@ export function VentBox({ onPosted }: Props) {
     }
   }
 
+  const form = (
+    <form
+      onSubmit={handleSubmit}
+      className="relative mt-6 flex flex-col gap-5"
+    >
+      <div
+        className="absolute -left-[9999px] top-0 h-px w-px overflow-hidden"
+        aria-hidden="true"
+      >
+        <label htmlFor="vent-website-hp">No completar</label>
+        <input
+          id="vent-website-hp"
+          type="text"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+          value={honeypot}
+          onChange={(e) => setHoneypot(e.target.value)}
+        />
+      </div>
+
+      <label className="flex flex-col gap-2">
+        <span className="font-mono text-xs uppercase tracking-widest text-[#E5FF00]">
+          País (Latinoamérica)
+        </span>
+        <select
+          name="country"
+          value={countryCode}
+          onChange={(e) => setCountryCode(e.target.value)}
+          className="cursor-pointer border-2 border-white bg-black px-3 py-3 font-mono text-sm text-white focus:border-[#FF3B30] focus:outline-none"
+        >
+          {LATAM_COUNTRY_OPTIONS.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.label} ({c.code})
+            </option>
+          ))}
+        </select>
+        <span className="font-mono text-[11px] leading-snug text-white/45">
+          Detectamos tu país automáticamente cuando es posible; podés corregirlo.
+        </span>
+      </label>
+
+      <label className="flex flex-col gap-2">
+        <span className="font-mono text-xs uppercase tracking-widest text-[#E5FF00]">
+          ¿Quién fue?
+        </span>
+        <input
+          list={listId}
+          name="company"
+          value={company}
+          onChange={(e) => setCompany(e.target.value)}
+          placeholder="Nombre de la empresa o servicio"
+          className="border-2 border-white bg-black px-3 py-3 font-mono text-sm text-white placeholder:text-white/35 focus:border-[#FF3B30] focus:outline-none"
+          autoComplete="off"
+        />
+        <datalist id={listId}>
+          {suggestions.map((s) => (
+            <option key={s} value={s} />
+          ))}
+        </datalist>
+      </label>
+
+      <label className="flex flex-col gap-2">
+        <span className="font-mono text-xs uppercase tracking-widest text-[#E5FF00]">
+          Tu queja
+        </span>
+        <textarea
+          name="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={PLACEHOLDER_QUEJA}
+          rows={5}
+          className="resize-y border-2 border-white bg-black px-3 py-3 font-mono text-sm text-white placeholder:text-white/35 focus:border-[#FF3B30] focus:outline-none"
+        />
+      </label>
+
+      <div className="border-2 border-white/25 bg-black px-3 py-3">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <label className="flex min-w-0 flex-1 flex-col gap-2">
+            <span className="font-mono text-xs uppercase tracking-widest text-[#E5FF00]">
+              Verificación humana
+            </span>
+            <span className="font-mono text-sm text-white/80">
+              ¿Cuánto es{" "}
+              <strong className="text-white">
+                {challenge ? `${challenge.a} + ${challenge.b}` : "— + —"}
+              </strong>
+              ?
+            </span>
+            <input
+              type="text"
+              inputMode="numeric"
+              name="challengeAnswer"
+              value={challengeAnswer}
+              onChange={(e) => setChallengeAnswer(e.target.value)}
+              placeholder="Resultado"
+              className="max-w-[140px] border-2 border-white bg-black px-2 py-2 font-mono text-sm text-white placeholder:text-white/35 focus:border-[#E5FF00] focus:outline-none"
+              autoComplete="off"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => void loadChallenge()}
+            className="shrink-0 border-2 border-white/40 px-2 py-1 font-mono text-[10px] uppercase tracking-wide text-white/70 hover:border-white hover:text-white"
+          >
+            Nuevo número
+          </button>
+        </div>
+        {challengeError ? (
+          <p className="mt-2 font-mono text-xs text-[#FF3B30]">{challengeError}</p>
+        ) : null}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-mono text-xs uppercase tracking-widest text-[#E5FF00]">
+            Intensidad
+          </span>
+          <span className="font-mono text-sm text-[#FF3B30]">
+            {intensity}/10 · {intensityLabel(intensity)}
+          </span>
+        </div>
+        <input
+          type="range"
+          min={1}
+          max={10}
+          value={intensity}
+          onChange={(e) => setIntensity(Number(e.target.value))}
+          className="h-3 w-full cursor-pointer appearance-none rounded-none border-2 border-white accent-[#E5FF00]"
+          style={sliderStyle}
+        />
+      </div>
+
+      <div className="border-2 border-white/30 bg-black px-3 py-3">
+        <label className="flex cursor-pointer items-start gap-3 font-mono text-xs leading-snug text-white/90">
+          <input
+            type="checkbox"
+            name="manifestAccepted"
+            checked={manifestAccepted}
+            onChange={(e) => {
+              setManifestAccepted(e.target.checked);
+              if (e.target.checked) setError(null);
+            }}
+            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer border-2 border-[#E5FF00] accent-[#E5FF00]"
+          />
+          <span>
+            Entiendo que esto es contra la marca y no contiene ataques a
+            personas reales.
+          </span>
+        </label>
+      </div>
+
+      {error ? (
+        <p className="border-2 border-[#FF3B30] bg-black px-3 py-2 font-mono text-sm text-[#FF3B30]">
+          {error}
+        </p>
+      ) : null}
+
+      {noiseNotice ? (
+        <p
+          role="status"
+          className="border-2 border-[#E5FF00] bg-black px-3 py-2 font-mono text-sm text-[#E5FF00]"
+        >
+          {noiseNotice}
+        </p>
+      ) : null}
+
+      <button
+        type="submit"
+        disabled={loading || !manifestAccepted || !challenge}
+        className={`font-[family-name:var(--font-archivo)] border-2 border-black bg-[#E5FF00] px-4 py-4 text-lg uppercase tracking-wide text-black shadow-[6px_6px_0_0_#ffffff] transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#ffffff] disabled:cursor-not-allowed disabled:opacity-40 ${shake ? "animate-vent-shake" : ""}`}
+      >
+        {loading ? "Soltando…" : "Soltar veneno"}
+      </button>
+    </form>
+  );
+
+  if (variant === "modal") {
+    return (
+      <section
+        className="flex max-h-[min(92dvh,880px)] flex-col overflow-y-auto overscroll-contain bg-[#0A0A0A] p-4 pb-6 sm:p-6"
+        aria-labelledby="vent-modal-title"
+        aria-modal="true"
+        role="dialog"
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b-2 border-white/25 pb-4">
+          <div className="min-w-0">
+            <h2
+              id="vent-modal-title"
+              className="font-[family-name:var(--font-archivo)] text-xl uppercase leading-none tracking-tight text-white sm:text-2xl"
+            >
+              Nueva queja
+            </h2>
+            <p className="mt-1 font-mono text-xs text-white/60">
+              Anónimo · sin registro
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onRequestClose}
+            className="shrink-0 border-2 border-white/40 px-3 py-1.5 font-mono text-sm text-white hover:border-[#E5FF00] hover:text-[#E5FF00]"
+            aria-label="Cerrar formulario"
+          >
+            ✕
+          </button>
+        </div>
+        {form}
+      </section>
+    );
+  }
+
   return (
     <section
       aria-labelledby="vent-title"
@@ -193,182 +430,7 @@ export function VentBox({ onPosted }: Props) {
       <p className="mt-2 font-mono text-sm text-white/70">
         Sin registros, totalmente anónimo, un desahogo libre
       </p>
-
-      <form
-        onSubmit={handleSubmit}
-        className="relative mt-6 flex flex-col gap-5"
-      >
-        <div
-          className="absolute -left-[9999px] top-0 h-px w-px overflow-hidden"
-          aria-hidden="true"
-        >
-          <label htmlFor="vent-website-hp">No completar</label>
-          <input
-            id="vent-website-hp"
-            type="text"
-            name="website"
-            tabIndex={-1}
-            autoComplete="off"
-            value={honeypot}
-            onChange={(e) => setHoneypot(e.target.value)}
-          />
-        </div>
-
-        <label className="flex flex-col gap-2">
-          <span className="font-mono text-xs uppercase tracking-widest text-[#E5FF00]">
-            País (mercado de la marca)
-          </span>
-          <select
-            name="country"
-            value={countryCode}
-            onChange={(e) => setCountryCode(e.target.value)}
-            className="cursor-pointer border-2 border-white bg-black px-3 py-3 font-mono text-sm text-white focus:border-[#FF3B30] focus:outline-none"
-          >
-            {COUNTRY_OPTIONS.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.label} ({c.code})
-              </option>
-            ))}
-          </select>
-          <span className="font-mono text-[11px] leading-snug text-white/45">
-            Si la marca opera en varios países, elegí dónde te pasó: el ranking y
-            las sugerencias se separan por mercado.
-          </span>
-        </label>
-
-        <label className="flex flex-col gap-2">
-          <span className="font-mono text-xs uppercase tracking-widest text-[#E5FF00]">
-            ¿Quién fue?
-          </span>
-          <input
-            list="company-suggestions"
-            name="company"
-            value={company}
-            onChange={(e) => setCompany(e.target.value)}
-            placeholder="Nombre de la empresa o servicio"
-            className="border-2 border-white bg-black px-3 py-3 font-mono text-sm text-white placeholder:text-white/35 focus:border-[#FF3B30] focus:outline-none"
-            autoComplete="off"
-          />
-          <datalist id="company-suggestions">
-            {suggestions.map((s) => (
-              <option key={s} value={s} />
-            ))}
-          </datalist>
-        </label>
-
-        <label className="flex flex-col gap-2">
-          <span className="font-mono text-xs uppercase tracking-widest text-[#E5FF00]">
-            Tu queja
-          </span>
-          <textarea
-            name="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={PLACEHOLDER_QUEJA}
-            rows={5}
-            className="resize-y border-2 border-white bg-black px-3 py-3 font-mono text-sm text-white placeholder:text-white/35 focus:border-[#FF3B30] focus:outline-none"
-          />
-        </label>
-
-        <div className="border-2 border-white/25 bg-black px-3 py-3">
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <label className="flex min-w-0 flex-1 flex-col gap-2">
-              <span className="font-mono text-xs uppercase tracking-widest text-[#E5FF00]">
-                Verificación humana
-              </span>
-              <span className="font-mono text-sm text-white/80">
-                ¿Cuánto es{" "}
-                <strong className="text-white">
-                  {challenge ? `${challenge.a} + ${challenge.b}` : "— + —"}
-                </strong>
-                ?
-              </span>
-              <input
-                type="text"
-                inputMode="numeric"
-                name="challengeAnswer"
-                value={challengeAnswer}
-                onChange={(e) => setChallengeAnswer(e.target.value)}
-                placeholder="Resultado"
-                className="max-w-[140px] border-2 border-white bg-black px-2 py-2 font-mono text-sm text-white placeholder:text-white/35 focus:border-[#E5FF00] focus:outline-none"
-                autoComplete="off"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => void loadChallenge()}
-              className="shrink-0 border-2 border-white/40 px-2 py-1 font-mono text-[10px] uppercase tracking-wide text-white/70 hover:border-white hover:text-white"
-            >
-              Nuevo número
-            </button>
-          </div>
-          {challengeError ? (
-            <p className="mt-2 font-mono text-xs text-[#FF3B30]">{challengeError}</p>
-          ) : null}
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <span className="font-mono text-xs uppercase tracking-widest text-[#E5FF00]">
-              Intensidad
-            </span>
-            <span className="font-mono text-sm text-[#FF3B30]">
-              {intensity}/10 · {intensityLabel(intensity)}
-            </span>
-          </div>
-          <input
-            type="range"
-            min={1}
-            max={10}
-            value={intensity}
-            onChange={(e) => setIntensity(Number(e.target.value))}
-            className="h-3 w-full cursor-pointer appearance-none rounded-none border-2 border-white accent-[#E5FF00]"
-            style={sliderStyle}
-          />
-        </div>
-
-        <div className="border-2 border-white/30 bg-black px-3 py-3">
-          <label className="flex cursor-pointer items-start gap-3 font-mono text-xs leading-snug text-white/90">
-            <input
-              type="checkbox"
-              name="manifestAccepted"
-              checked={manifestAccepted}
-              onChange={(e) => {
-                setManifestAccepted(e.target.checked);
-                if (e.target.checked) setError(null);
-              }}
-              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer border-2 border-[#E5FF00] accent-[#E5FF00]"
-            />
-            <span>
-              Entiendo que esto es contra la marca y no contiene ataques a
-              personas reales.
-            </span>
-          </label>
-        </div>
-
-        {error ? (
-          <p className="border-2 border-[#FF3B30] bg-black px-3 py-2 font-mono text-sm text-[#FF3B30]">
-            {error}
-          </p>
-        ) : null}
-
-        {noiseNotice ? (
-          <p
-            role="status"
-            className="border-2 border-[#E5FF00] bg-black px-3 py-2 font-mono text-sm text-[#E5FF00]"
-          >
-            {noiseNotice}
-          </p>
-        ) : null}
-
-        <button
-          type="submit"
-          disabled={loading || !manifestAccepted || !challenge}
-          className={`font-[family-name:var(--font-archivo)] border-2 border-black bg-[#E5FF00] px-4 py-4 text-lg uppercase tracking-wide text-black shadow-[6px_6px_0_0_#ffffff] transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#ffffff] disabled:cursor-not-allowed disabled:opacity-40 ${shake ? "animate-vent-shake" : ""}`}
-        >
-          {loading ? "Soltando…" : "Soltar veneno"}
-        </button>
-      </form>
+      {form}
     </section>
   );
 }

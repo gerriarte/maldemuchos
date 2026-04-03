@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isValidCountryCode } from "@/lib/domain/countries";
+import { isValidLatamCountryCode } from "@/lib/domain/countries";
 import {
   ComplaintModerationUnavailableError,
   ComplaintValidationError,
@@ -66,9 +66,9 @@ export async function POST(request: Request) {
     const text = typeof body.text === "string" ? body.text : "";
     const intensity = Number(body.intensity);
 
-    if (!countryRaw || !isValidCountryCode(countryRaw)) {
+    if (!countryRaw || !isValidLatamCountryCode(countryRaw)) {
       throw new ComplaintValidationError(
-        "Elegí un país válido del listado (mercado de la marca).",
+        "Elegí un país latinoamericano del listado (mercado de la marca).",
       );
     }
 

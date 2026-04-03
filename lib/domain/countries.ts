@@ -1,6 +1,6 @@
 /**
  * Países admitidos (ISO 3166-1 alpha-2) para segmentar marcas multinacionales.
- * Orden: prioridad LatAm + España; incluye mercados frecuentes.
+ * Lista completa para mostrar etiquetas de datos históricos.
  */
 export const COUNTRY_OPTIONS: ReadonlyArray<{ code: string; label: string }> = [
   { code: "AR", label: "Argentina" },
@@ -32,10 +32,22 @@ export const COUNTRY_OPTIONS: ReadonlyArray<{ code: string; label: string }> = [
   { code: "GB", label: "Reino Unido" },
 ];
 
+/** Solo Latinoamérica y el Caribe hispano (formularios y nuevas publicaciones). */
+export const LATAM_COUNTRY_OPTIONS: ReadonlyArray<{ code: string; label: string }> =
+  COUNTRY_OPTIONS.filter(
+    (c) =>
+      !["ES", "US", "PT", "DE", "FR", "IT", "GB"].includes(c.code),
+  );
+
 const CODE_SET = new Set(COUNTRY_OPTIONS.map((c) => c.code));
+const LATAM_CODE_SET = new Set(LATAM_COUNTRY_OPTIONS.map((c) => c.code));
 
 export function isValidCountryCode(code: string): boolean {
   return CODE_SET.has(code.trim().toUpperCase());
+}
+
+export function isValidLatamCountryCode(code: string): boolean {
+  return LATAM_CODE_SET.has(code.trim().toUpperCase());
 }
 
 export function countryLabel(code: string): string | undefined {
@@ -43,10 +55,13 @@ export function countryLabel(code: string): string | undefined {
   return COUNTRY_OPTIONS.find((x) => x.code === c)?.label;
 }
 
-/** Intenta deducir país desde locale del navegador (es-AR → AR). */
+/**
+ * Deduce país desde locale del navegador (es-AR → AR).
+ * Solo devuelve códigos LatAm; si no coincide, AR.
+ */
 export function guessCountryFromLocale(locale: string | undefined): string {
   if (!locale || typeof locale !== "string") return "AR";
   const m = /^[a-z]{2}-([A-Z]{2})/i.exec(locale.trim());
-  if (m?.[1] && isValidCountryCode(m[1])) return m[1].toUpperCase();
+  if (m?.[1] && isValidLatamCountryCode(m[1])) return m[1].toUpperCase();
   return "AR";
 }
